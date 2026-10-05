@@ -1,0 +1,74 @@
+# Configuration for the plans service. Named plans.yml (not application.yml) so several services can
+# share one JVM host without their settings colliding.
+spring:
+  application:
+    name: sprout-plans
+  datasource:
+    url: ${PLANS_DB_URL:jdbc:postgresql://localhost:5432/sprout?currentSchema=plans}
+    username: ${PLANS_DB_USER:sprout}
+    password: ${PLANS_DB_PASSWORD:sprout}
+    hikari:
+      maximum-pool-size: 5
+      pool-name: plans
+      connection-timeout: 2000   # fail fast when the database is gone (CHAOS-01's lesson)
+      validation-timeout: 1000
+  flyway:
+    locations: classpath:db/plans
+    schemas: plans
+    default-schema: plans
+  jackson:
+    default-property-inclusion: non_null   # absent, never null: the contracts say so
+    deserialization:
+      fail-on-unknown-properties: true
+  jmx:
+    enabled: false
+
+server:
+  port: ${PLANS_PORT:8115}
+  address: ${PLANS_BIND:127.0.0.1}
+  tomcat:
+    threads:
+      max: 16
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTEL_ENABLED:false}
+        url: ${OTEL_METRICS_URL:http://localhost:4318/v1/metrics}
+        step: 15s
+    tracing:
+      endpoint: ${OTEL_TRACES_URL:http://localhost:4318/v1/traces}
+  tracing:
+    enabled: ${OTEL_ENABLED:false}
+    sampling:
+      probability: 1.0
+  metrics:
+    tags:
+      service: sprout-plans
+
+logging:
+  structured:
+    format:
+      console: ${LOG_FORMAT:}
+  pattern:
+    correlation: "[%X{requestId:-}] "
+
+sprout:
+  plans:
+    every: ${PLANS_EVERY:30s}               # how often due instalments are looked for
+    service-key: ${SPROUT_SERVICE_KEY:dev-only-service-key}
+    minimum: "100.00"
+    maximum: "100000.00"
+    max-active: 10
+    marketdata-url: ${PLANS_MARKETDATA_URL:http://127.0.0.1:8103}
+    oms-url: ${PLANS_OMS_URL:http://127.0.0.1:8109}
+    accounts-url: ${PLANS_ACCOUNTS_URL:http://127.0.0.1:8104}
